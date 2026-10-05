@@ -35,9 +35,10 @@ jobs:
         # pkgbuild accepts only dotted-numeric versions, so the tag is
         # sanitized: v1.3.1-ap.1 -> 1.3.1. Environment overrides the
         # Makefile's `RELEASE_VERSION ?= git describe` default.
+        # installer-pkg only stages prebuilt binaries, so build first.
         run: |
           RELEASE_VERSION="$(echo "${GITHUB_REF_NAME:-0.0.0}" | sed -e 's/^v//' -e 's/-.*//')" \
-            make installer-pkg BUILD_CONFIGURATION=release
+            make build installer-pkg BUILD_CONFIGURATION=release
 
       - name: Generate checksums
         run: |
