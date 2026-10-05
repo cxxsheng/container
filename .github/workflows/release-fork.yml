@@ -1,0 +1,58 @@
+name: fork release build
+
+# Release pipeline for the cxxsheng/container fork. Upstream's release flow
+# runs on Apple self-hosted runners and is gated to the apple/container
+# repository, so the fork ships its own: GitHub-hosted macOS runner, ad-hoc
+# codesigning (no Developer ID certificate yet), pkg + SHA-256 checksums.
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Build and publish installer package
+    runs-on: macos-26
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Verify toolchain
+        run: |
+          xcode-select -p
+          swift --version
+          pkgbuild --version
+
+      - name: Build installer package
+        # pkgbuild accepts only dotted-numeric versions, so the tag is
+        # sanitized: v1.3.1-ap.1 -> 1.3.1. Environment overrides the
+        # Makefile's `RELEASE_VERSION ?= git describe` default.
+        run: |
+          RELEASE_VERSION="$(echo "${GITHUB_REF_NAME:-0.0.0}" | sed -e 's/^v//' -e 's/-.*//')" \
+            make installer-pkg BUILD_CONFIGURATION=release
+
+      - name: Generate checksums
+        run: |
+          cd bin/release
+          shasum -a 256 *.pkg > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          token: ${{ github.token }}
+          name: ${{ github.ref_name }}
+          draft: true
+          make_latest: false
+          fail_on_unmatched_files: true
+          files: |
+            bin/release/*.pkg
+            bin/release/SHA256SUMS
