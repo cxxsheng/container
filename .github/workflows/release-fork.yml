@@ -29,7 +29,7 @@ jobs:
         run: |
           xcode-select -p
           swift --version
-          pkgbuild --version
+          which pkgbuild
 
       - name: Build installer package
         # pkgbuild accepts only dotted-numeric versions, so the tag is
